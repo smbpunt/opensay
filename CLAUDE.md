@@ -20,6 +20,10 @@ Hexagonal architecture (Ports & Adapters). See `docs/architecture.md` for full d
 - Audio never written to disk, zeroed after transcription (crate `zeroize`)
 - API keys stored in OS keyring (crate `keyring`)
 
+## Project Status
+
+Consult `docs/plan.md` to understand the current state of the project, what has been implemented, and what remains to be done.
+
 ## grepai - Semantic Search
 
 Use grepai as primary tool for code exploration (fallback to Grep/Glob on error).

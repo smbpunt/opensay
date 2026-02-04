@@ -1,7 +1,13 @@
+use std::path::PathBuf;
+
 use tauri::State;
 
 use crate::app::AppController;
-use crate::domain::{AppConfig, AudioConfig, AudioDevice, AudioState};
+use crate::domain::{
+    AppConfig, AudioConfig, AudioDevice, AudioState, HardwareProfile, InstalledModel,
+    ModelCatalog, ModelRecommendation, Quantization,
+};
+use crate::ports::{TranscribeConfig, TranscriptionResult};
 
 /// Get the current application configuration.
 #[tauri::command]
@@ -126,4 +132,161 @@ pub async fn recover_audio(controller: State<'_, AppController>) -> Result<(), S
         .recover_audio()
         .await
         .map_err(|e| e.to_string())
+}
+
+// ==================== Transcription Commands ====================
+
+/// Transcribe recorded audio.
+/// This starts recording, waits for stop, then transcribes.
+#[tauri::command]
+pub async fn transcribe(
+    controller: State<'_, AppController>,
+    language: Option<String>,
+) -> Result<TranscriptionResult, String> {
+    // Stop recording and get buffer
+    let buffer = controller
+        .stop_recording()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Transcribe
+    let config = TranscribeConfig {
+        language,
+        ..Default::default()
+    };
+
+    controller
+        .transcribe(buffer, Some(config))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Load a transcription model.
+#[tauri::command]
+pub async fn load_model(
+    controller: State<'_, AppController>,
+    path: String,
+) -> Result<(), String> {
+    controller
+        .load_model(PathBuf::from(path))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Load a model by ID (uses installed model path).
+#[tauri::command]
+pub async fn load_model_by_id(
+    controller: State<'_, AppController>,
+    model_id: String,
+    quantization: String,
+) -> Result<(), String> {
+    let quant = Quantization::from_suffix(&quantization)
+        .ok_or_else(|| format!("Invalid quantization: {}", quantization))?;
+
+    let path = controller
+        .model_path(&model_id, quant)
+        .ok_or_else(|| format!("Model not installed: {}-{}", model_id, quantization))?;
+
+    controller
+        .load_model(path)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Check if a model is loaded.
+#[tauri::command]
+pub fn is_model_loaded(controller: State<'_, AppController>) -> bool {
+    controller.is_model_loaded()
+}
+
+/// Unload the current model.
+#[tauri::command]
+pub fn unload_model(controller: State<'_, AppController>) {
+    controller.unload_model();
+}
+
+// ==================== Model Management Commands ====================
+
+/// Get the model catalog.
+#[tauri::command]
+pub fn get_model_catalog(controller: State<'_, AppController>) -> ModelCatalog {
+    controller.model_catalog()
+}
+
+/// List installed models.
+#[tauri::command]
+pub fn list_installed_models(
+    controller: State<'_, AppController>,
+) -> Result<Vec<InstalledModel>, String> {
+    controller
+        .list_installed_models()
+        .map_err(|e| e.to_string())
+}
+
+/// Check if a model is installed.
+#[tauri::command]
+pub fn is_model_installed(
+    controller: State<'_, AppController>,
+    model_id: String,
+    quantization: String,
+) -> Result<bool, String> {
+    let quant = Quantization::from_suffix(&quantization)
+        .ok_or_else(|| format!("Invalid quantization: {}", quantization))?;
+
+    Ok(controller.is_model_installed(&model_id, quant))
+}
+
+/// Download a model.
+#[tauri::command]
+pub async fn download_model(
+    controller: State<'_, AppController>,
+    model_id: String,
+    quantization: String,
+) -> Result<InstalledModel, String> {
+    let quant = Quantization::from_suffix(&quantization)
+        .ok_or_else(|| format!("Invalid quantization: {}", quantization))?;
+
+    controller
+        .download_model(&model_id, quant, None)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Delete an installed model.
+#[tauri::command]
+pub fn delete_model(
+    controller: State<'_, AppController>,
+    model_id: String,
+    quantization: String,
+) -> Result<(), String> {
+    let quant = Quantization::from_suffix(&quantization)
+        .ok_or_else(|| format!("Invalid quantization: {}", quantization))?;
+
+    controller
+        .delete_model(&model_id, quant)
+        .map_err(|e| e.to_string())
+}
+
+/// Get the models directory path.
+#[tauri::command]
+pub fn get_models_dir(controller: State<'_, AppController>) -> String {
+    controller.models_dir().to_string_lossy().to_string()
+}
+
+// ==================== Hardware Commands ====================
+
+/// Get the hardware profile.
+#[tauri::command]
+pub fn get_hardware_profile(
+    controller: State<'_, AppController>,
+) -> Result<HardwareProfile, String> {
+    controller.hardware_profile().map_err(|e| e.to_string())
+}
+
+/// Get the recommended model for this hardware.
+#[tauri::command]
+pub fn get_recommended_model(
+    controller: State<'_, AppController>,
+) -> Result<ModelRecommendation, String> {
+    controller.recommended_model().map_err(|e| e.to_string())
 }

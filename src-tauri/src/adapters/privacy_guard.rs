@@ -205,11 +205,15 @@ impl HttpClient for PrivacyGuard {
         path: &Path,
         progress_callback: Option<Box<dyn Fn(u64, u64) + Send + Sync>>,
     ) -> Result<(), DomainError> {
+        use futures_util::StreamExt;
+        use tokio::io::AsyncWriteExt;
+
         self.is_url_allowed(url)?;
 
         let response = self
             .client
             .get(url)
+            .timeout(std::time::Duration::from_secs(3600)) // 1 hour timeout for large models
             .send()
             .await
             .map_err(|e| DomainError::HttpRequest(e.to_string()))?;
@@ -229,19 +233,60 @@ impl HttpClient for PrivacyGuard {
             std::fs::create_dir_all(parent)?;
         }
 
-        let mut file = std::fs::File::create(path)?;
+        // Write to temp file first, then rename atomically
+        let temp_path = path.with_extension("download");
 
-        let bytes = response
-            .bytes()
-            .await
-            .map_err(|e| DomainError::HttpRequest(e.to_string()))?;
+        // Helper to clean up temp file on error
+        let cleanup_temp = || {
+            let temp = temp_path.clone();
+            async move { let _ = tokio::fs::remove_file(&temp).await; }
+        };
 
-        use std::io::Write;
-        file.write_all(&bytes)?;
-        let downloaded = bytes.len() as u64;
+        let mut file = match tokio::fs::File::create(&temp_path).await {
+            Ok(f) => f,
+            Err(e) => {
+                cleanup_temp().await;
+                return Err(DomainError::Io(e.to_string()));
+            }
+        };
 
-        if let Some(callback) = &progress_callback {
-            callback(downloaded, total_size);
+        let mut downloaded: u64 = 0;
+        let mut stream = response.bytes_stream();
+
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = match chunk_result {
+                Ok(c) => c,
+                Err(e) => {
+                    drop(file);
+                    cleanup_temp().await;
+                    return Err(DomainError::HttpRequest(e.to_string()));
+                }
+            };
+
+            if let Err(e) = file.write_all(&chunk).await {
+                drop(file);
+                cleanup_temp().await;
+                return Err(DomainError::Io(e.to_string()));
+            }
+
+            downloaded += chunk.len() as u64;
+
+            if let Some(callback) = &progress_callback {
+                callback(downloaded, total_size);
+            }
+        }
+
+        if let Err(e) = file.flush().await {
+            drop(file);
+            cleanup_temp().await;
+            return Err(DomainError::Io(e.to_string()));
+        }
+        drop(file);
+
+        // Atomic rename from temp to final path
+        if let Err(e) = tokio::fs::rename(&temp_path, path).await {
+            cleanup_temp().await;
+            return Err(DomainError::Io(e.to_string()));
         }
 
         info!(path = ?path, size = downloaded, "File downloaded successfully");

@@ -3,7 +3,7 @@
 ## Status
 | Phase      | Current            | Progress |
 |------------|--------------------|----------|
-| **Active** | 3 - Transcription  | 0%       |
+| **Active** | 4 - MVP macOS      | 0%       |
 
 ## Phases
 
@@ -11,7 +11,7 @@
 |---|------------------------|-------------|----------------------------------------------|
 | 1 | Setup & Infrastructure | Complete    | Build compile, PrivacyGuard bloque le réseau |
 | 2 | Audio Capture          | Complete    | Enregistrement WAV fonctionnel, hot-plug OK  |
-| 3 | Local Transcription    | Not Started | Transcription fichier référence réussie      |
+| 3 | Local Transcription    | Complete    | Transcription fichier référence réussie      |
 | 4 | **MVP macOS**          | Not Started | Flux complet: voix → texte collé dans app    |
 | 5 | Cross-Platform & GPU   | Not Started | E2E sur 3 OS, benchmarks GPU                 |
 | 6 | Production Ready       | Not Started | Fresh install OK, audit privacy passé        |
@@ -30,9 +30,9 @@
 - [x] Hot-plug state machine (Idle/Recording/DeviceLost/Recovering/Error)
 
 ## Phase 3: Local Transcription
-- [ ] Transcriber trait + WhisperCppTranscriber
-- [ ] ModelManager (download, SHA-256, catalog)
-- [ ] HardwareDetector (CPU)
+- [x] Transcriber trait + WhisperCppTranscriber
+- [x] ModelManager (download, SHA-256, catalog)
+- [x] HardwareDetector (CPU)
 
 ## Phase 4: MVP macOS
 - [ ] Silero VAD intégré

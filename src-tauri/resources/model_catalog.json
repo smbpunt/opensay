@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "id": "whisper-tiny",
+      "name": "Whisper Tiny",
+      "description": "Fastest model, lower accuracy. Good for quick transcriptions.",
+      "min_ram_gb": 2,
+      "variants": [
+        {
+          "quantization": "Q5_1",
+          "size_bytes": 32166155,
+          "sha256": "c77c5766f1cef09b6b7d47f21b546cbddd4157886b3b5d6d4f709e91e66c7c2b",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin"
+        }
+      ]
+    },
+    {
+      "id": "whisper-base",
+      "name": "Whisper Base",
+      "description": "Good balance for low-memory systems.",
+      "min_ram_gb": 4,
+      "variants": [
+        {
+          "quantization": "Q5_1",
+          "size_bytes": 59721011,
+          "sha256": "4baf70dd0d7c4247ba2b81fafd9c01005ac77c2f9ef064e00dcf195d0e2fdd2f",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en-q5_1.bin"
+        }
+      ]
+    },
+    {
+      "id": "whisper-small",
+      "name": "Whisper Small",
+      "description": "Recommended for most users. Good accuracy with reasonable speed.",
+      "min_ram_gb": 8,
+      "variants": [
+        {
+          "quantization": "Q5_1",
+          "size_bytes": 190098681,
+          "sha256": "bfdff4894dcb76bbf647d56263ea2a96645423f1669176f4844a1bf8e478ad30",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en-q5_1.bin"
+        }
+      ]
+    },
+    {
+      "id": "whisper-medium",
+      "name": "Whisper Medium",
+      "description": "Higher accuracy, slower transcription.",
+      "min_ram_gb": 8,
+      "variants": [
+        {
+          "quantization": "Q5_0",
+          "size_bytes": 539225533,
+          "sha256": "76733e26ad8fe1c7a5bf7531a9d41917b2adc0f20f2e4f5531688a8c6cd88eb0",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en-q5_0.bin"
+        }
+      ]
+    },
+    {
+      "id": "whisper-large-v3",
+      "name": "Whisper Large v3",
+      "description": "Highest accuracy, requires significant resources.",
+      "min_ram_gb": 16,
+      "variants": [
+        {
+          "quantization": "Q5_0",
+          "size_bytes": 1081140203,
+          "sha256": "d75795ecff3f83b5faa89d1900604ad8c780abd5739fae406de19f23ecd98ad1",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-q5_0.bin"
+        }
+      ]
+    }
+  ]
+}

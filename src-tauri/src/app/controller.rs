@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use parking_lot::RwLock;
@@ -5,16 +6,29 @@ use tokio::sync::broadcast;
 use tracing::info;
 use tracing_appender::non_blocking::WorkerGuard;
 
-use crate::adapters::{CpalAudioManager, PrivacyGuard, TomlConfigStore};
-use crate::domain::{AppConfig, AudioBuffer, AudioConfig, AudioDevice, AudioEvent, AudioState, DomainError};
+use crate::adapters::{
+    CpalAudioManager, CpuHardwareDetector, LocalModelManager, PrivacyGuard, TomlConfigStore,
+    WhisperCppTranscriber,
+};
+use crate::domain::{
+    AppConfig, AudioBuffer, AudioConfig, AudioDevice, AudioEvent, AudioState, DomainError,
+    DownloadProgress, HardwareProfile, InstalledModel, ModelCatalog, ModelRecommendation,
+    Quantization,
+};
 use crate::infrastructure::init_logging;
-use crate::ports::{AudioManager, ConfigStore, HttpClient};
+use crate::ports::{
+    AudioManager, ConfigStore, HardwareDetector, HttpClient, ModelManager, TranscribeConfig,
+    Transcriber, TranscriptionResult,
+};
 
 /// Application controller that orchestrates initialization and manages global state.
 pub struct AppController {
     config: RwLock<AppConfig>,
     config_store: Arc<TomlConfigStore>,
     audio_manager: Arc<CpalAudioManager>,
+    transcriber: Arc<WhisperCppTranscriber>,
+    model_manager: Arc<LocalModelManager>,
+    hardware_detector: Arc<CpuHardwareDetector>,
     _log_guard: Option<WorkerGuard>,
 }
 
@@ -46,8 +60,24 @@ impl AppController {
         // Step 5: Initialize audio manager
         let audio_manager = Arc::new(CpalAudioManager::new()?);
 
+        // Step 6: Initialize hardware detector
+        let hardware_detector = Arc::new(CpuHardwareDetector::new());
+        // Pre-detect hardware profile
+        let _ = hardware_detector.detect();
+
+        // Step 7: Initialize model manager
+        let model_manager = Arc::new(LocalModelManager::new(config_store.data_dir())?);
+
+        // Step 8: Initialize transcriber
+        let threads = hardware_detector
+            .profile()
+            .map(|p| p.recommended_threads())
+            .unwrap_or(1);
+        let transcriber = Arc::new(WhisperCppTranscriber::new(threads));
+
         info!(
             local_only = config.privacy.local_only,
+            transcriber_threads = threads,
             "AppController initialized"
         );
 
@@ -55,6 +85,9 @@ impl AppController {
             config: RwLock::new(config),
             config_store,
             audio_manager,
+            transcriber,
+            model_manager,
+            hardware_detector,
             _log_guard: log_guard,
         })
     }
@@ -151,5 +184,92 @@ impl AppController {
     /// Get current audio input level (0.0-1.0).
     pub fn audio_level(&self) -> f32 {
         self.audio_manager.current_level()
+    }
+
+    // ==================== Transcription Methods ====================
+
+    /// Transcribe an audio buffer to text.
+    pub async fn transcribe(
+        &self,
+        audio: AudioBuffer,
+        config: Option<TranscribeConfig>,
+    ) -> Result<TranscriptionResult, DomainError> {
+        let config = config.unwrap_or_default();
+        self.transcriber.transcribe(&audio, &config).await
+    }
+
+    /// Load a transcription model from the specified path.
+    pub async fn load_model(&self, path: PathBuf) -> Result<(), DomainError> {
+        self.transcriber.load_model(&path).await
+    }
+
+    /// Check if a transcription model is loaded.
+    pub fn is_model_loaded(&self) -> bool {
+        self.transcriber.is_model_loaded()
+    }
+
+    /// Unload the current transcription model.
+    pub fn unload_model(&self) {
+        self.transcriber.unload_model();
+    }
+
+    // ==================== Model Management Methods ====================
+
+    /// Get the model catalog.
+    pub fn model_catalog(&self) -> ModelCatalog {
+        self.model_manager.catalog().clone()
+    }
+
+    /// List installed models.
+    pub fn list_installed_models(&self) -> Result<Vec<InstalledModel>, DomainError> {
+        self.model_manager.list_installed()
+    }
+
+    /// Check if a model is installed.
+    pub fn is_model_installed(&self, model_id: &str, quant: Quantization) -> bool {
+        self.model_manager.is_installed(model_id, quant)
+    }
+
+    /// Get the path to an installed model.
+    pub fn model_path(&self, model_id: &str, quant: Quantization) -> Option<PathBuf> {
+        self.model_manager.model_path(model_id, quant)
+    }
+
+    /// Download a model.
+    pub async fn download_model(
+        &self,
+        model_id: &str,
+        quant: Quantization,
+        progress: Option<Box<dyn Fn(DownloadProgress) + Send + Sync>>,
+    ) -> Result<InstalledModel, DomainError> {
+        self.model_manager.download(model_id, quant, progress).await
+    }
+
+    /// Verify a model's integrity.
+    pub fn verify_model(&self, model_id: &str, quant: Quantization) -> Result<bool, DomainError> {
+        self.model_manager.verify(model_id, quant)
+    }
+
+    /// Delete an installed model.
+    pub fn delete_model(&self, model_id: &str, quant: Quantization) -> Result<(), DomainError> {
+        self.model_manager.delete(model_id, quant)
+    }
+
+    /// Get the models directory path.
+    pub fn models_dir(&self) -> PathBuf {
+        self.model_manager.models_dir()
+    }
+
+    // ==================== Hardware Methods ====================
+
+    /// Get the hardware profile.
+    pub fn hardware_profile(&self) -> Result<HardwareProfile, DomainError> {
+        self.hardware_detector.detect()
+    }
+
+    /// Get the recommended model for this hardware.
+    pub fn recommended_model(&self) -> Result<ModelRecommendation, DomainError> {
+        self.hardware_detector
+            .recommend_model(self.model_manager.catalog())
     }
 }

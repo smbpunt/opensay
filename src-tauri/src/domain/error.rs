@@ -36,6 +36,24 @@ pub enum DomainError {
 
     #[error("Already recording")]
     AudioAlreadyRecording,
+
+    #[error("Model error: {0}")]
+    Model(String),
+
+    #[error("Model not found: {0}")]
+    ModelNotFound(String),
+
+    #[error("Model verification failed: expected {expected}, got {actual}")]
+    ModelVerification { expected: String, actual: String },
+
+    #[error("Model download failed: {0}")]
+    ModelDownload(String),
+
+    #[error("Hardware detection error: {0}")]
+    Hardware(String),
+
+    #[error("Whisper error: {0}")]
+    Whisper(String),
 }
 
 impl From<std::io::Error> for DomainError {

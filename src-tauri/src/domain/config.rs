@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 /// Privacy-related configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct PrivacyConfig {
     /// When true, all network requests are blocked (default: true).
     pub local_only: bool,
@@ -33,6 +34,7 @@ impl PrivacyConfig {
 
 /// Logging configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct LoggingConfig {
     /// Log level: "trace", "debug", "info", "warn", "error".
     pub level: String,
@@ -54,6 +56,7 @@ impl Default for LoggingConfig {
 
 /// UI configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct UiConfig {
     /// Show tray icon.
     pub show_tray: bool,
@@ -75,6 +78,7 @@ impl Default for UiConfig {
 
 /// Transcription configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct TranscriptionConfig {
     /// Selected model name.
     pub model: String,
@@ -110,6 +114,7 @@ impl Default for TranscriptionConfig {
 /// NOTE: Currently only "Alt+Space" is supported as the shortcut.
 /// Custom shortcut parsing is planned for a future release.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct ShortcutConfig {
     /// Keyboard shortcut to toggle recording.
     /// Currently only "Alt+Space" is supported (other values are ignored).
@@ -126,6 +131,7 @@ impl Default for ShortcutConfig {
 
 /// Output/text injection configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct OutputConfig {
     /// Delay in ms before simulating paste (for clipboard sync).
     pub paste_delay_ms: u64,
@@ -141,6 +147,7 @@ impl Default for OutputConfig {
 
 /// Main application configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct AppConfig {
     pub privacy: PrivacyConfig,
     pub logging: LoggingConfig,

@@ -54,6 +54,15 @@ pub enum DomainError {
 
     #[error("Whisper error: {0}")]
     Whisper(String),
+
+    #[error("Clipboard error: {0}")]
+    Clipboard(String),
+
+    #[error("Input simulation error: {0}")]
+    InputSimulation(String),
+
+    #[error("Invalid state for this operation")]
+    InvalidState,
 }
 
 impl From<std::io::Error> for DomainError {

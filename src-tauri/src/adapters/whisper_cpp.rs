@@ -91,6 +91,9 @@ impl Transcriber for WhisperCppTranscriber {
 
         // Run transcription in blocking task (CPU-bound)
         let language = config.language.clone();
+        let vad_enabled = config.vad_enabled;
+        let vad_no_speech = config.vad_no_speech_threshold;
+        let vad_entropy = config.vad_entropy_threshold;
         let result = tokio::task::spawn_blocking(move || {
             let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
 
@@ -102,6 +105,13 @@ impl Transcriber for WhisperCppTranscriber {
             // Set language if specified, otherwise auto-detect
             if let Some(ref lang) = language {
                 params.set_language(Some(lang));
+            }
+
+            // VAD parameters - filter silence and non-speech tokens
+            if vad_enabled {
+                params.set_no_speech_thold(vad_no_speech);
+                params.set_entropy_thold(vad_entropy);
+                params.set_suppress_non_speech_tokens(true);
             }
 
             // Create state for this transcription

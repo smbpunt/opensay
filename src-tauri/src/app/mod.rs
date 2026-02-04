@@ -1,3 +1,3 @@
 pub mod controller;
 
-pub use controller::AppController;
+pub use controller::{AppController, ToggleResult};

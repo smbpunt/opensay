@@ -1,9 +1,9 @@
 # Development Plan
 
 ## Status
-| Phase      | Current            | Progress |
-|------------|--------------------|----------|
-| **Active** | 4 - MVP macOS      | 0%       |
+| Phase      | Current              | Progress |
+|------------|----------------------|----------|
+| **Active** | 5 - Cross-Platform   | 0%       |
 
 ## Phases
 
@@ -12,8 +12,8 @@
 | 1 | Setup & Infrastructure | Complete    | Build compile, PrivacyGuard bloque le réseau |
 | 2 | Audio Capture          | Complete    | Enregistrement WAV fonctionnel, hot-plug OK  |
 | 3 | Local Transcription    | Complete    | Transcription fichier référence réussie      |
-| 4 | **MVP macOS**          | Not Started | Flux complet: voix → texte collé dans app    |
-| 5 | Cross-Platform & GPU   | Not Started | E2E sur 3 OS, benchmarks GPU                 |
+| 4 | MVP macOS              | Complete    | Flux complet: voix → texte collé dans app    |
+| 5 | **Cross-Platform & GPU** | Not Started | E2E sur 3 OS, benchmarks GPU               |
 | 6 | Production Ready       | Not Started | Fresh install OK, audit privacy passé        |
 
 ---
@@ -35,10 +35,10 @@
 - [x] HardwareDetector (CPU)
 
 ## Phase 4: MVP macOS
-- [ ] Silero VAD intégré
-- [ ] OutputManager (arboard + enigo)
-- [ ] Raccourci global + tray
-- [ ] Zeroize audio post-transcription
+- [x] VAD intégré (whisper.cpp params: no_speech_thold, entropy_thold, suppress_non_speech_tokens)
+- [x] OutputManager (arboard + enigo) - ClipboardOutputManager adapter
+- [x] Raccourci global Alt+Space (tauri-plugin-global-shortcut)
+- [x] Zeroize audio post-transcription (AudioBuffer dropped after transcribe in toggle_recording)
 
 ## Phase 5: Cross-Platform & GPU
 - [ ] Builds Windows/Linux

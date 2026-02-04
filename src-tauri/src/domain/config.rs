@@ -82,6 +82,13 @@ pub struct TranscriptionConfig {
     pub language: String,
     /// Enable Voice Activity Detection.
     pub vad_enabled: bool,
+    /// VAD: No-speech probability threshold (0.0-1.0).
+    /// Higher values = more aggressive silence detection.
+    /// Default 0.6 from whisper.cpp recommendations.
+    pub vad_no_speech_threshold: f32,
+    /// VAD: Entropy threshold for detecting non-speech.
+    /// Default 2.4 from whisper.cpp recommendations.
+    pub vad_entropy_threshold: f32,
 }
 
 impl Default for TranscriptionConfig {
@@ -90,6 +97,44 @@ impl Default for TranscriptionConfig {
             model: "whisper-small".to_string(),
             language: "auto".to_string(),
             vad_enabled: true,
+            // Defaults from whisper.cpp:
+            // https://github.com/ggerganov/whisper.cpp/blob/master/whisper.h
+            vad_no_speech_threshold: 0.6,
+            vad_entropy_threshold: 2.4,
+        }
+    }
+}
+
+/// Shortcut configuration.
+///
+/// NOTE: Currently only "Alt+Space" is supported as the shortcut.
+/// Custom shortcut parsing is planned for a future release.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShortcutConfig {
+    /// Keyboard shortcut to toggle recording.
+    /// Currently only "Alt+Space" is supported (other values are ignored).
+    pub toggle_shortcut: String,
+}
+
+impl Default for ShortcutConfig {
+    fn default() -> Self {
+        Self {
+            toggle_shortcut: "Alt+Space".to_string(),
+        }
+    }
+}
+
+/// Output/text injection configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OutputConfig {
+    /// Delay in ms before simulating paste (for clipboard sync).
+    pub paste_delay_ms: u64,
+}
+
+impl Default for OutputConfig {
+    fn default() -> Self {
+        Self {
+            paste_delay_ms: 100,
         }
     }
 }
@@ -101,6 +146,8 @@ pub struct AppConfig {
     pub logging: LoggingConfig,
     pub ui: UiConfig,
     pub transcription: TranscriptionConfig,
+    pub shortcut: ShortcutConfig,
+    pub output: OutputConfig,
 }
 
 impl AppConfig {

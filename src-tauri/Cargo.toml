@@ -66,3 +66,10 @@ whisper-rs = "0.13"
 
 # Cryptography (SHA-256 for model verification)
 sha2 = "0.10"
+
+# Output (clipboard + input simulation)
+arboard = "3"
+enigo = "0.3"
+
+# Tauri plugins (global shortcut for desktop)
+tauri-plugin-global-shortcut = "2"

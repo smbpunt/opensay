@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use parking_lot::RwLock;
@@ -7,8 +8,8 @@ use tracing::info;
 use tracing_appender::non_blocking::WorkerGuard;
 
 use crate::adapters::{
-    CpalAudioManager, CpuHardwareDetector, LocalModelManager, PrivacyGuard, TomlConfigStore,
-    WhisperCppTranscriber,
+    ClipboardOutputManager, CpalAudioManager, CpuHardwareDetector, LocalModelManager,
+    PrivacyGuard, TomlConfigStore, WhisperCppTranscriber,
 };
 use crate::domain::{
     AppConfig, AudioBuffer, AudioConfig, AudioDevice, AudioEvent, AudioState, DomainError,
@@ -17,9 +18,22 @@ use crate::domain::{
 };
 use crate::infrastructure::init_logging;
 use crate::ports::{
-    AudioManager, ConfigStore, HardwareDetector, HttpClient, ModelManager, TranscribeConfig,
-    Transcriber, TranscriptionResult,
+    AudioManager, ConfigStore, HardwareDetector, HttpClient, ModelManager, OutputManager,
+    TranscribeConfig, Transcriber, TranscriptionResult,
 };
+
+/// Result of a toggle recording operation.
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(tag = "type")]
+pub enum ToggleResult {
+    /// Recording started.
+    Started,
+    /// Recording stopped and transcription completed.
+    Completed {
+        /// The transcribed text, or None if no speech was detected.
+        text: Option<String>,
+    },
+}
 
 /// Application controller that orchestrates initialization and manages global state.
 pub struct AppController {
@@ -29,6 +43,9 @@ pub struct AppController {
     transcriber: Arc<WhisperCppTranscriber>,
     model_manager: Arc<LocalModelManager>,
     hardware_detector: Arc<CpuHardwareDetector>,
+    output_manager: Arc<ClipboardOutputManager>,
+    /// Guard against concurrent toggle_recording calls (e.g., keyboard repeat)
+    toggle_in_progress: AtomicBool,
     _log_guard: Option<WorkerGuard>,
 }
 
@@ -75,6 +92,9 @@ impl AppController {
             .unwrap_or(1);
         let transcriber = Arc::new(WhisperCppTranscriber::new(threads));
 
+        // Step 9: Initialize output manager
+        let output_manager = Arc::new(ClipboardOutputManager::new(config.output.clone())?);
+
         info!(
             local_only = config.privacy.local_only,
             transcriber_threads = threads,
@@ -88,6 +108,8 @@ impl AppController {
             transcriber,
             model_manager,
             hardware_detector,
+            output_manager,
+            toggle_in_progress: AtomicBool::new(false),
             _log_guard: log_guard,
         })
     }
@@ -184,6 +206,96 @@ impl AppController {
     /// Get current audio input level (0.0-1.0).
     pub fn audio_level(&self) -> f32 {
         self.audio_manager.current_level()
+    }
+
+    /// Toggle recording: start if idle, stop + transcribe + inject if recording.
+    ///
+    /// This is the main entry point for the global shortcut flow.
+    /// When recording is stopped, the audio is transcribed and the resulting
+    /// text is injected into the active application via clipboard paste.
+    ///
+    /// Uses an atomic guard to prevent concurrent calls (e.g., from keyboard repeat).
+    pub async fn toggle_recording(&self) -> Result<ToggleResult, DomainError> {
+        // Guard against concurrent toggle calls (keyboard repeat, double-tap)
+        if self
+            .toggle_in_progress
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_err()
+        {
+            return Err(DomainError::Audio(
+                "Toggle already in progress".to_string(),
+            ));
+        }
+
+        // Ensure we reset the flag when we're done, even on error
+        let result = self.toggle_recording_inner().await;
+        self.toggle_in_progress.store(false, Ordering::SeqCst);
+        result
+    }
+
+    /// Inner implementation of toggle_recording (without concurrency guard).
+    async fn toggle_recording_inner(&self) -> Result<ToggleResult, DomainError> {
+        match self.audio_state() {
+            AudioState::Idle => {
+                self.start_recording().await?;
+                info!("Toggle: recording started");
+                Ok(ToggleResult::Started)
+            }
+            AudioState::Recording => {
+                // Stop recording
+                let buffer = self.stop_recording().await?;
+                info!(
+                    duration_secs = buffer.duration_secs(),
+                    samples = buffer.samples().len(),
+                    "Toggle: recording stopped, starting transcription"
+                );
+
+                // Transcribe with VAD settings from config
+                let config = {
+                    let app_config = self.config.read();
+                    TranscribeConfig {
+                        language: if app_config.transcription.language == "auto" {
+                            None
+                        } else {
+                            Some(app_config.transcription.language.clone())
+                        },
+                        vad_enabled: app_config.transcription.vad_enabled,
+                        vad_no_speech_threshold: app_config.transcription.vad_no_speech_threshold,
+                        vad_entropy_threshold: app_config.transcription.vad_entropy_threshold,
+                        threads: 0, // Use default
+                    }
+                };
+
+                let result = self.transcriber.transcribe(&buffer, &config).await?;
+                // buffer is dropped here and zeroized automatically
+
+                info!(
+                    text_len = result.text.len(),
+                    duration_ms = result.duration_ms,
+                    "Toggle: transcription complete"
+                );
+
+                // Inject text into active application (skip if empty)
+                let text = if result.text.is_empty() {
+                    None
+                } else {
+                    self.output_manager.inject_text(&result.text).await?;
+                    Some(result.text)
+                };
+
+                Ok(ToggleResult::Completed { text })
+            }
+            AudioState::DeviceLost | AudioState::Recovering => {
+                Err(DomainError::Audio(
+                    "Audio device unavailable, please wait for recovery".to_string(),
+                ))
+            }
+            AudioState::Error => {
+                Err(DomainError::Audio(
+                    "Audio is in error state, please recover first".to_string(),
+                ))
+            }
+        }
     }
 
     // ==================== Transcription Methods ====================

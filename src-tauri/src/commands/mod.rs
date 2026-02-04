@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use tauri::State;
 
-use crate::app::AppController;
+use crate::app::{AppController, ToggleResult};
 use crate::domain::{
     AppConfig, AudioConfig, AudioDevice, AudioState, HardwareProfile, InstalledModel,
     ModelCatalog, ModelRecommendation, Quantization,
@@ -130,6 +130,18 @@ pub fn get_audio_level(controller: State<'_, AppController>) -> f32 {
 pub async fn recover_audio(controller: State<'_, AppController>) -> Result<(), String> {
     controller
         .recover_audio()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Toggle recording: start if idle, stop + transcribe + inject if recording.
+///
+/// This is the main entry point for the global shortcut flow (Option+Space).
+/// Returns the result indicating whether recording started or completed with text.
+#[tauri::command]
+pub async fn toggle_recording(controller: State<'_, AppController>) -> Result<ToggleResult, String> {
+    controller
+        .toggle_recording()
         .await
         .map_err(|e| e.to_string())
 }

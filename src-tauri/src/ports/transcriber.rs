@@ -12,8 +12,12 @@ pub struct TranscribeConfig {
     /// None for auto-detection.
     pub language: Option<String>,
     /// Enable voice activity detection to skip silence.
-    /// TODO(Phase 4): Integrate Silero VAD - currently unused.
     pub vad_enabled: bool,
+    /// VAD: No-speech probability threshold (0.0-1.0).
+    /// Higher values = more aggressive silence filtering.
+    pub vad_no_speech_threshold: f32,
+    /// VAD: Entropy threshold for non-speech detection.
+    pub vad_entropy_threshold: f32,
     /// Number of threads to use (0 = auto).
     pub threads: u32,
 }
@@ -23,6 +27,9 @@ impl Default for TranscribeConfig {
         Self {
             language: None,
             vad_enabled: true,
+            // Defaults from whisper.cpp recommendations
+            vad_no_speech_threshold: 0.6,
+            vad_entropy_threshold: 2.4,
             threads: 0,
         }
     }
@@ -97,6 +104,8 @@ mod tests {
         let config = TranscribeConfig::default();
         assert!(config.language.is_none());
         assert!(config.vad_enabled);
+        assert!((config.vad_no_speech_threshold - 0.6).abs() < 0.01);
+        assert!((config.vad_entropy_threshold - 2.4).abs() < 0.01);
         assert_eq!(config.threads, 0);
     }
 }

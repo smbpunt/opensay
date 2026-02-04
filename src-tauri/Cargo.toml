@@ -1,0 +1,57 @@
+[package]
+name = "opensay"
+version = "0.1.0"
+description = "Privacy-first cross-platform voice transcription"
+authors = ["OpenSay Team"]
+license = "MIT"
+repository = "https://github.com/opensay/opensay"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "opensay_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri core
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP client (for PrivacyGuard)
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-appender = "0.2"
+
+# Platform-specific paths
+dirs = "5"
+
+# Security
+zeroize = { version = "1", features = ["derive"] }
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Synchronization
+once_cell = "1"
+parking_lot = "0.12"
+
+# Async traits
+async-trait = "0.1"
+
+# URL handling
+url = "2"

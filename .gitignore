@@ -1,2 +1,24 @@
+# Claude Code
 .grepai
 .claude
+
+# Rust
+src-tauri/target/
+*.rs.bk
+
+# Node.js / Frontend
+ui/node_modules/
+ui/dist/
+
+# IDE
+.idea/
+.vscode/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Tasks
+tasks/

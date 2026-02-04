@@ -1,0 +1,111 @@
+use serde::{Deserialize, Serialize};
+
+/// Privacy-related configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrivacyConfig {
+    /// When true, all network requests are blocked (default: true).
+    pub local_only: bool,
+    /// Allowed domains when local_only is false.
+    pub allowed_domains: Vec<String>,
+}
+
+impl Default for PrivacyConfig {
+    fn default() -> Self {
+        Self {
+            local_only: true,
+            allowed_domains: Self::default_allowed_domains(),
+        }
+    }
+}
+
+impl PrivacyConfig {
+    /// Default allowed domains for API and model downloads.
+    pub fn default_allowed_domains() -> Vec<String> {
+        vec![
+            "api.openai.com".to_string(),
+            "api.deepgram.com".to_string(),
+            "huggingface.co".to_string(),
+            "cdn-lfs.huggingface.co".to_string(),
+            "cdn-lfs-us-1.huggingface.co".to_string(),
+        ]
+    }
+}
+
+/// Logging configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LoggingConfig {
+    /// Log level: "trace", "debug", "info", "warn", "error".
+    pub level: String,
+    /// Enable file logging with rotation.
+    pub file_logging: bool,
+    /// Maximum number of log files to keep.
+    pub max_files: u32,
+}
+
+impl Default for LoggingConfig {
+    fn default() -> Self {
+        Self {
+            level: "info".to_string(),
+            file_logging: true,
+            max_files: 7,
+        }
+    }
+}
+
+/// UI configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiConfig {
+    /// Show tray icon.
+    pub show_tray: bool,
+    /// Start minimized.
+    pub start_minimized: bool,
+    /// Theme: "system", "light", "dark".
+    pub theme: String,
+}
+
+impl Default for UiConfig {
+    fn default() -> Self {
+        Self {
+            show_tray: true,
+            start_minimized: false,
+            theme: "system".to_string(),
+        }
+    }
+}
+
+/// Transcription configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TranscriptionConfig {
+    /// Selected model name.
+    pub model: String,
+    /// Language code (e.g., "en", "fr", "auto").
+    pub language: String,
+    /// Enable Voice Activity Detection.
+    pub vad_enabled: bool,
+}
+
+impl Default for TranscriptionConfig {
+    fn default() -> Self {
+        Self {
+            model: "whisper-small".to_string(),
+            language: "auto".to_string(),
+            vad_enabled: true,
+        }
+    }
+}
+
+/// Main application configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AppConfig {
+    pub privacy: PrivacyConfig,
+    pub logging: LoggingConfig,
+    pub ui: UiConfig,
+    pub transcription: TranscriptionConfig,
+}
+
+impl AppConfig {
+    /// Create a new AppConfig with default values.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}

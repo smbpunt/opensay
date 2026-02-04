@@ -55,3 +55,7 @@ async-trait = "0.1"
 
 # URL handling
 url = "2"
+
+# Audio capture
+cpal = "0.15"
+ringbuf = "0.4"

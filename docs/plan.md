@@ -1,16 +1,16 @@
 # Development Plan
 
 ## Status
-| Phase      | Current   | Progress |
-|------------|-----------|----------|
-| **Active** | 2 - Audio | 0%       |
+| Phase      | Current            | Progress |
+|------------|--------------------|----------|
+| **Active** | 3 - Transcription  | 0%       |
 
 ## Phases
 
 | # | Phase                  | Status      | Validation                                   |
 |---|------------------------|-------------|----------------------------------------------|
 | 1 | Setup & Infrastructure | Complete    | Build compile, PrivacyGuard bloque le réseau |
-| 2 | Audio Capture          | Not Started | Enregistrement WAV fonctionnel, hot-plug OK  |
+| 2 | Audio Capture          | Complete    | Enregistrement WAV fonctionnel, hot-plug OK  |
 | 3 | Local Transcription    | Not Started | Transcription fichier référence réussie      |
 | 4 | **MVP macOS**          | Not Started | Flux complet: voix → texte collé dans app    |
 | 5 | Cross-Platform & GPU   | Not Started | E2E sur 3 OS, benchmarks GPU                 |
@@ -25,9 +25,9 @@
 - [x] ConfigStore + logging
 
 ## Phase 2: Audio Capture
-- [ ] AudioManager trait + cpal adapter
-- [ ] Ring buffer lock-free (60s)
-- [ ] Hot-plug state machine (Idle/Recording/DeviceLost/Recovering/Error)
+- [x] AudioManager trait + cpal adapter
+- [x] Ring buffer lock-free (60s)
+- [x] Hot-plug state machine (Idle/Recording/DeviceLost/Recovering/Error)
 
 ## Phase 3: Local Transcription
 - [ ] Transcriber trait + WhisperCppTranscriber

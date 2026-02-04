@@ -8,7 +8,11 @@ mod infrastructure;
 mod ports;
 
 use app::AppController;
-use commands::{get_config, get_paths, is_network_blocked, update_config};
+use commands::{
+    get_audio_config, get_audio_level, get_audio_state, get_config, get_paths,
+    get_recording_duration, is_network_blocked, list_audio_devices, recover_audio,
+    select_audio_device, start_recording, stop_recording, update_config,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -29,6 +33,16 @@ pub fn run() {
             update_config,
             is_network_blocked,
             get_paths,
+            // Audio commands
+            start_recording,
+            stop_recording,
+            get_audio_state,
+            get_audio_config,
+            list_audio_devices,
+            select_audio_device,
+            get_recording_duration,
+            get_audio_level,
+            recover_audio,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

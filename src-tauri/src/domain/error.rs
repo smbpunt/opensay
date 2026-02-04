@@ -1,3 +1,4 @@
+use crate::domain::audio::AudioState;
 use thiserror::Error;
 
 /// Domain-level errors for OpenSay.
@@ -23,6 +24,18 @@ pub enum DomainError {
 
     #[error("Transcription error: {0}")]
     Transcription(String),
+
+    #[error("Audio device error: {message}")]
+    AudioDevice { message: String },
+
+    #[error("Invalid audio state transition from {from:?} to {to:?}")]
+    AudioStateTransition { from: AudioState, to: AudioState },
+
+    #[error("Not currently recording")]
+    AudioNotRecording,
+
+    #[error("Already recording")]
+    AudioAlreadyRecording,
 }
 
 impl From<std::io::Error> for DomainError {
